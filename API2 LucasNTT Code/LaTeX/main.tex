@@ -1,0 +1,273 @@
+\documentclass{article}
+
+\usepackage{arxiv}
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{lipsum}
+\usepackage{minted}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage[table]{xcolor}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{mathtools}
+\usepackage{mleftright}
+\usepackage{comment}
+\usepackage[many]{tcolorbox}
+\usepackage{tabularx}
+\usepackage[templates]{genealogytree}
+
+
+\subtitle{A Practical Introduction to}
+\title{LucasNTT Code}
+\author{
+  Guillaume P. Hérault \\
+  Geneva, Switzerland\\
+}
+
+\begin{document}
+\maketitle
+% ------ styles -----------
+\theoremstyle{definition}
+\newmdtheoremenv[
+  hidealllines=true,
+  leftline=true,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=10pt,
+  innerbottommargin=10pt
+]{definition}{Definition}
+
+\newmdtheoremenv[
+  hidealllines=true,
+  leftline=true,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=10pt,
+  innerbottommargin=10pt
+]{algorithm}{Algorithm}
+
+
+\section{Introduction}
+
+Part of a wider project (\cite{LucasNTT}), LucasNTT is a C++/Cuda program implementing the Lucas-Lehmer primality test for Mersenne numbers. It translates the mathematical principles described in the companion document (\cite{LucasNTT_documents} into an efficient and modular source code. LucasNTT was not designed to prospect for new primes, but to rigorously prove the primality of a given candidate using integer arithmetic with no round-off errors.
+
+Beyond its use in primality testing, this document aims to present how to implement a Number Theoretic Transform (NTT) efficiently on GPU hardware. Since the programming strategies and design patterns used for NTTs are largely similar to those used for complex FFTs, the code structure and optimization techniques presented here are of broader interest. Students and researchers working on fast multiplication algorithms or high-performance Fourier transforms may find useful insights, even outside the context of number theory.
+
+The following sections describe how to compile and execute the program, how the code is structured, and how the mathematical operations are mapped onto the GPU. Particular attention is given to readability, maintainability, and performance, with a detailed explanation of the role of each class and the design choices made throughout the implementation.
+
+\section{Compiling LucasNTT}
+The LucasNTT program is written in standard C++11 and CUDA, with no external library dependencies. It can be built either from the command line using provided batch scripts, or from within Visual Studio on Windows for debugging purposes.
+
+Two compilation scripts are included in the repository: one for Windows (\texttt{\_build\_windows.cmd}) and one for Linux (\texttt{\_build\_linux.sh}). These scripts scan the source directory and build all files in the directory.
+
+\textbf{Please modify these scripts according to your needs, by specifying the compute capability of the targeted GPU at the top of the file.}
+
+The minimum software requirements are CUDA Toolkit 11.4 and a GPU with Compute Capability 3.5. 
+However, to benefit from recent performance improvements and features (such as better register usage, reduced launch latency, and improved occupancy), it is strongly recommended to compile with CUDA Toolkit 12.8 and execute on a Nvidia GPU with Compute Capability 7.0 or higher.
+
+\newpage
+\section{Execution}
+
+The LucasNTT program can be executed via the command line, with optional parameters that override the default values specified in an optional \texttt{LucasNTT.ini} file. A sample \texttt{.ini} file is included in the repository and documents all configurable options, such as output paths, FFT layout, and iteration control.
+
+By default, running the program with a single parameter launches a full Lucas-Lehmer test:
+\begin{minted}[fontsize=\small]{bash}
+LucasNTT 9689
+\end{minted}
+This command tests the primality of the Mersenne number $2^{9689} - 1$.
+
+To execute a fixed number of iterations without completing the full test:
+\begin{minted}[fontsize=\small]{bash}
+LucasNTT 82589933 1000
+\end{minted}
+This runs 1000 Lucas-Lehmer iterations on $2^{82589933} - 1$.
+
+To specify the FFT plan and output files explicitly:
+\begin{minted}[fontsize=\small]{bash}
+LucasNTT 82589933 1000 "/lucasntt/results/file" "2048:2048"
+\end{minted}
+This uses a two-step FFT plan of size $2^{11} \times 2^{11}$, and creates output files such as  \texttt{/lucasntt/results/file.txt} and \texttt{/lucasntt/results/file.env}.
+
+Indeed the program can generate three output files: the \texttt{.txt} file contains runtime statistics, the chosen FFT path and the primality result. The \texttt{.env} file contains hardware/environment info. The \texttt{.dat} file contains the residue of the Lucas-Lehmer test, in a readable hex format. The residue is dumped every hour for safety reasons, so that we can continue the calculation after a crash without restarting from the beginning. The program also handles the manual \texttt{CTRL-C} interruption, saves the residue, so that you can continue the process without restarting from the beginning.
+
+If no arguments are provided at command line, all values are taken from \texttt{LucasNTT.ini}. Command-line parameters always override the corresponding entries in the \texttt{.ini} file.
+
+\section{Coding Lucas-Lehmer Test}
+
+For the sake of illustration, let us detail how we can test with certainty the primality of $M_q = 2^q - 1$ where $q = 82,\!589,\!933$, in $\mathbb{Z}/p\mathbb{Z}$ with $p = 2^{64} - 2^{32} + 1$. Although \texttt{LucasNTT} is able to run the pseudo-primality PRP test by setting \texttt{PRP=1} in the \texttt{.ini} file, we describe here the implementation of the regular Lucas-Lehmer test. Starting with $x_0 = 4$, we compute repeatedly
+$x_{k+1} = x_k^2 - 2 \mod M_q$.
+We leverage Fast Fourier Transforms (FFT) to efficiently square $x$.
+
+Let $n$ be the total length of the FFTs used during this process. We split the binary representation of $x$ into $n$ chunks. Since $x$ has $q$ significant bits, each chunk can have up to $\lceil q / n \rceil$ bits, meaning each chunk can hold values up to
+$m = 2^{\lceil q / n \rceil} - 1$.
+The first step is to compute the smallest power-of-two $n$ such that the inequality
+$2nm^2 < p$
+holds. This condition ensures that no overflow occurs during the calculation of $x^2$.
+
+After reading the command-line parameters and the \texttt{.ini} file, the \texttt{MainProcess} class launches the calculation of $n$ with the help of the \texttt{NttLengths} class. For $q = 82,\!589,\!933$, we compute $n = 2^{22} = 4,\!194,\!304$ (4M). Each element of the FFT thus holds at most
+$\lceil q / n \rceil = 20$
+significant bits. We then allocate a memory buffer $x$ as an array of $n$ 64-bit words in global GPU memory. Although all FFTs are computed in-place, a double-sized buffer must be allocated to perform matrix transpositions. In this example, the memory buffer is
+$4M \times 8 \times 2 = 64\ \text{MB}$.
+Each word initially contains only 19 or 20 significant bits at the beginning of a Lucas-Lehmer iteration, but all 64 bits may be used during the FFT computation. At the end of each iteration, a carry-propagation step ensures that each chunk returns to 19--20 significant bits, ready for the next iteration. This is the role of the \texttt{reduce2base} kernel.
+
+To reduce $x$ modulo $M_q$ at each iteration, \texttt{LucasNTT} uses the IBDWT algorithm (\cite{CF94}). The chunk sizes (19 or 20 bits) are chosen to approximate the irrational theoretical base
+$2^{q/n}$
+as closely as possible. These widths are precomputed and stored in GPU global memory before starting the Lucas-Lehmer process, along with the IBDWT weights that are applied to each element prior to the FFT. To complete the precalculation step, kernels derived from \texttt{Ntt} precompute the $n^\text{th}$ roots of unity, and kernels derived from \texttt{NttFactor} precompute the twiddle factors. These twiddle factors are stored in bit-reversed order to allow efficient coalesced memory access during later computation.
+
+During the process, all arithmetic operations are performed modulo $p$. Modular addition and subtraction are straightforward, requiring at most one correction step. Multiplication is more involved, as using the \texttt{\%} operator or repeated subtraction would be too costly. Instead, \texttt{LucasNTT} exploits the special structure of $p$. Notably,
+$2^{96} \equiv -1 \mod p$
+and
+$2^{64} \equiv 2^{32} - 1 \mod p$,
+which allows the high and middle bits of a 128-bit product to be efficiently folded back into the 64-bit range (ref needed). As a result, multiplication modulo $p$ is achieved using only two multiplications, three additions, and three conditional tests.
+
+Once the precalculation phase is complete, \texttt{LucasNTT} evaluates the performance of multiple candidate FFT configurations. In the previous example, FFTs of length $n = 2^{22}$ can be executed directly in global memory with 22 sequential steps (although this is known to be suboptimal), or using two stages in shared memory (denoted \texttt{2048:2048} or \texttt{2K:2K}), or with three stages (e.g., \texttt{256:128:128}). As many parameters can vary (radix size, thread usage, transposition strategy, etc.), all candidates are benchmarked as described in the next section.
+
+Once the fastest configuration is selected, the Lucas-Lehmer test begins. Each iteration consists of the following seven steps:
+
+\begin{align*}
+\texttt{Weight, Forward FFT, Pointwise Square, Backward FFT, Unweight, Propagate carry, Minus 2}
+\end{align*}
+
+For performance reasons, \texttt{LucasNTT} attempts to group as many steps as possible within each CUDA kernel. On the other hand, the FFT steps may involve sub-steps, increasing the number of kernels.
+
+\section{Explanation of the Source Code and Class Architecture}
+
+All classes responsible for executing the Lucas-Lehmer process inherit from the base class \texttt{Process}. Each \texttt{Process} instance may own from 0 to $n$ \texttt{SubProcesses}, which also inherit from \texttt{Process}. The lowest level of this hierarchy consists of CUDA kernels. Before selecting its \texttt{SubProcesses}, each \texttt{Process} evaluates the performance of available candidates. The fastest ones are selected using the \texttt{GetBestPerformers()} method.
+
+There are four hierarchical levels in the \texttt{Process} class architecture, organized as follows:
+\begin{center}
+\texttt{MainProcess} $\longrightarrow$ \texttt{LucasPRP} $\longrightarrow$ \texttt{KernelPool} $\longrightarrow$ \texttt{Kernel}
+\end{center}
+Here, the arrows represent a parent-to-child \emph{subprocess} relationship, not class inheritance (which is depicted in figure $\ref{fig:ProcessHierarchy}$. Each parent \texttt{Process} instance owns one or more child \texttt{SubProcesses}, forming a recursive execution structure.
+
+The entry point of the program is \texttt{main.cpp}, which instantiates exactly one instance of \texttt{MainProcess}. This class is responsible for analyzing the \texttt{.ini} file and creating as many \texttt{LucasPRP} candidates as there are FFT length configurations. In the previous example where $q = 82,\!589,\!933$, \texttt{MainProcess} can potentially instantiate a \texttt{LucasPRP} candidate in global memory for the full size $4,\!194,\!304$, another with the FFT configuration \texttt{2048:2048}, and another with \texttt{256:128:128}. These are the \texttt{LucasPRP} candidates for executing the Lucas-Lehmer test. The fastest candidate is selected among them.
+
+The \texttt{LucasPRP} class is responsible for performing the main Lucas-Lehmer loop $x_{k+1} = x_k^2 - 2 \mod M_q$. It allocates memory buffers and precomputes the widths and weights used by the IBDWT. Depending on its FFT length, the \texttt{LucasPRP} class will instantiate different pools of kernels. For example, the \texttt{2048:2048} FFT configuration can be implemented by three different means: a pool of kernels processing the first FFT by columns without matrix transposition (\texttt{FFT\_2SMEM}), another pool using matrix transpositions so that the first FFT is taken by rows with coalesced accesses (\texttt{FFT\_2SMEM\_TRANSPOSE}), or another pool storing the input number in a transposed array to avoid the initial transposition step (\texttt{FFT\_2SMEM\_STORE\_TRANSPOSED}). In this case, the \texttt{LucasPRP} class contains three \texttt{KernelPool} candidates, which also inherit from \texttt{Process}. Again, the fastest candidate is selected among them.
+
+Each \texttt{KernelPool} is responsible for identifying the appropriate CUDA kernels to use. A pool consists of different \emph{families} of kernels. For instance, in the \texttt{FFT\_2SMEM} configuration, the KernelPool is responsible for finding kernels of the following \emph{families}:
+\begin{itemize}
+    \item \texttt{WEIGHT\_FFTCOL\_TWIDDLE}
+    \item \texttt{FFTROW\_SQUARE\_IFFTROW}
+    \item \texttt{TWIDDLE\_IFFTCOL\_UNWEIGHT}
+    \item \texttt{REDUCE2BASE}
+    \item \texttt{MINUS2}
+\end{itemize}
+A \texttt{Factory} class is responsible for instantiating the appropriate \texttt{Kernel} candidates. The \texttt{Kernel} class, which wraps the actual CUDA kernel launch, lies at the bottom of the hierarchy. 
+
+Most kernels inherit from the \texttt{Ntt} class and use precomputed roots of unity. For each kernel family, several implementation variants typically exist. For example, within the \texttt{FFTROW\_SQUARE\_IFFTROW} family—which performs in shared memory $n$ FFTs by rows, then a pointwise squaring, followed by $n$ backward FFTs—there are several options: one kernel might assign one Radix-2 butterfly per thread, another may assign multiple butterflies per thread, or use a Radix-4 implementation. Even at this level of the hierarchy, we have candidates. And again, the fastest candidate is selected among them. Note that most of the kernels are using C++ templates extensively to minimize runtime overhead. All kernel class names and filenames follow a naming convention that describes first their role, followed by a double underscore, followed by the methodology and the scope of work.
+
+The \texttt{Factory} class is responsible for instantiating all possible kernel variants. The factory design pattern is particularly useful in this context, as this is the only class that needs to be aware of all kernel implementations. From a development standpoint, this is the only place where a new \texttt{\#include} must be added when introducing a new kernel.
+
+The \texttt{MainProcess} executes in two phases: first, it selects the fastest candidates using the \texttt{GetBestPerformers()} method, which recursively evaluates the performance of all \texttt{Process} instances; then, it launches the Lucas-Lehmer test using the \texttt{Run()} method, also executed recursively. These two recursive methods (among others) in the \texttt{Process} base class are of particular interest from a programming perspective.
+
+In addition to the \texttt{Process}-derived classes, several helper classes assist with specialized tasks. Notably, the \texttt{NttLengths} class computes, analyzes, and displays possible FFT lengths. The \texttt{Logger} class handles output messages to the user and implements the Singleton design pattern—another instructive feature from a software architecture perspective.
+
+\begin{figure}
+\hbadness=10000
+\resizebox{\textwidth}{!}{
+\begin{genealogypicture}[
+  template=signpost,
+  level distance=12mm,
+  level size=10mm,
+  node size=26mm,
+  box={colback=white,sharp corners,fontupper=\sffamily},
+  mark/.style={box={colback=blue!20}},
+  edges={foreground={line width=1pt,black,-LaTeX},background={line width=2pt,white}}
+]
+child{
+  g[mark]{Process}
+  child{ g{MainProcess} }
+  child{ g{LucasPRP} }
+  child{ g{KernelPool} }
+  child{ g[mark]{Kernel}
+   child{ g{r2b} }
+   child{ g{m2} }
+   child{ g{(others)} }
+    child{ g[mark]{Ntt}
+      child{ g[mark]{gmem}
+        child{ g{gmem\_cooley\_\\tukey\_\_r2\_8to64m} }
+        child{ g{gmem\_pease\_\_\\r2\_8to64m} }
+      }
+      child{ g[mark]{NttFactor}
+        child{ g{tw\_ifftc\_uw\_\_\\r2\_8to2k} }
+        child{ g{w\_fftc\_tw\_\_\\r2\_8to2k} }
+        child{ g{(others)} }
+      }
+      child{ g{w\_fft\_sqr\_ifft\_\_\\uw\_r2\_8to2k} }
+      child{ g{fftr\_sqr\_ifftr\_\_\\r2\_8to4k} }
+      child{ g{(others)} }
+    }
+      child{ g[mark]{Transpose}
+        child{ g{w\_transpose} }
+        child{ g{transpose\_tw} }
+        child{ g{(others)} }
+      }
+  }
+}
+\end{genealogypicture}
+}
+\caption{Class Inheritance from \texttt{Process} (partial diagram)}
+\label{fig:ProcessHierarchy}
+\end{figure}
+\hbadness=1000
+
+\section{FFT programming}
+
+All \texttt{Ntt} kernels implement the Pease FFT algorithm (\cite{Pea68}). Like the well-known Cooley-Tukey (\cite{CT65}) and Stockham (\cite{Sto66}) algorithms, it is a Radix-based algorithm, but it is often simpler and faster to implement. This is due to its regular structure: the computation of butterflies does not vary across stages. In the Radix-2 version of the algorithm, the outer loop runs for $\log_2(n)$ iterations (as with Cooley-Tukey), while the inner loop processes each of the $n/2$ butterflies using a fixed stride of $n/2$ when loading values. Regardless of the iteration, the results are consistently written back to the output with no stride.
+
+Here is how the  $\texttt{LucasNTT}$ kernels operate: load data from global memory into shared memory, perform the FFT computation entirely in shared memory, and then write the result back to global memory. In a straightforward Radix-2 Pease implementation, the shared-memory computation uses $n/2$ threads per block, which limits the FFT size to $2^{11}$ when using 1024 threads, the upper limit of Cuda\footnote{\url{https://developer.nvidia.com/blog/cuda-refresher-cuda-programming-model}}. The algorithm consists of an outer loop from 0 to $\log_2(n) - 1$ and an inner butterfly computation where each thread operates as follows: load two values from shared memory with a stride of $n/2$, synchronize threads to ensure all reads are complete, compute the butterfly, write the results back to shared memory with no stride, and then synchronize again to ensure all threads have written their outputs before proceeding to the next stage. 
+
+Here is the pseudo-code of a Decimation-In-Frequency transform:
+
+\begin{minted}
+[
+frame=lines,
+fontsize=\footnotesize
+]
+{cuda}
+for (int j = 0; j <= log_n - 1; j++) {
+  u = x[threadIdx.x];
+  v = x[threadIdx.x + n/2];
+  __syncthreads();
+  x[threadIdx.x * 2] = u + v;
+  x[threadIdx.x * 2 + 1] = (u - v) * w[threadIdx.x >> j << j];
+  __syncthreads();
+}
+\end{minted}
+
+\textit{Note: For the sake of clarity, this pseudo-code has been slightly simplified (in real life arithmetic operations are performed modulo $p$).}
+
+If we assign multiple butterflies to each thread, or if we increase the Radix, we reduce the number of threads, and we can increase the length of the FFT being processed in shared memory, up to the limit of the shared memory size. Thanks to thread synchronization, the Pease algorithm, traditionally considered an out-of-place algorithm, can be implemented in-place. So we do not need to allocate a double buffer. As a result, FFTs of lengths up to $2^{12} = 4096$ can be successfully processed in shared memory.
+
+\section{Future improvements}
+
+Here is a list of potential suggestions that could improve performances.
+
+\subsection{Small FFTs by batch}
+Large FFTs are commonly split into 2 or 3 smaller FFTs (\cite{Bai89}). Those small FFTs may potentially be accelerated. For example, when computing a $2^{22}$-point FFT with a 3-step decomposition such as $128:128:256$, we start by computing $32768 \times \texttt{FFT-}128$. With a Radix-2 schema, this is done by launching a kernel with $32768$ blocks of $64$ threads. This is not optimal because the number of blocks that reside on the multiprocessor is limited by the number of registers available. So, it may be interesting to decrease the number of blocks, for example with $4096$ blocks of $512$ threads. Then each block would have to compute $8 \times \texttt{FFT-}128$ in a row. Here it would make sense to synchronize the threads by FFT, so instead of using a block synchronization with \texttt{\_\_synchthreads()} we should use cooperative groups of $32$ threads, a warp synchronization.
+
+Furthermore, on recent GPUs, we could use Multi-Stage Asynchronous Data Copies using \texttt{cuda::pipeline}, enabling the kernel to overlap memory transfers with computation. In other words, we could start computing the first small FFT once the first transfer has completed, and in parallel start loading in shared memory the elements of the second FFT, and so on. With this technique, the cost of memory transfers could be dramatically reduced, overlapped with FFT computation. Read the related NVIDIA blog\footnote{\url{https://developer.nvidia.com/blog/controlling-data-movement-to-boost-performance-on-ampere-architecture/}} for additional information.
+
+\subsection{Higher Radix}
+The LucasNTT program currently does not fully exploits the potential of the Radix-4 and Radix-8 algorithms. The current implementation is limited to two classes, \texttt{fftr\_\_r4\_8to2k} and \texttt{fftr\_\_r8\_8to2k}, that can probably be improved. Firstly, the roots of unity are currently not stored in shared memory. Secondly, it is not clear whether we should use \texttt{shifts()} or \texttt{mul\_Mod()}. Thirdly, only one butterfly is assigned per thread, meaning that we need $n/4$ threads to compute a Radix-4 FFT of length $n$. This is not optimal for a FFT-4096, used in the \texttt{FFT\_2SMEM} schemes for Mersenne numbers with exponents between $83'886'080$ and $167'772'159$.
+
+\newpage
+\section{Conclusion}
+
+LucasNTT demonstrates how integer-based NTTs can be implemented efficiently on GPUs, with a focus on clarity, modularity, and performance. The class organization provides a clear separation of responsibilities, which strengthens maintainability and makes the code easier to extend. This structure turns the program into a flexible platform where new strategies, optimizations, and arithmetic techniques can be integrated without compromising readability. 
+While the current framework is tailored to integer arithmetic, its modular nature suggests potential extensibility to the complex domain. Minimal structural changes would be required to the class hierarchy (kernel candidates within a kernel pool, orchestrated by the \texttt{LucasPRP} and \texttt{MainProcess} classes). Preliminary attempts by the author to generalize the arithmetic layer via an abstract \texttt{Element} class, supporting both integer and complex types through operator overloading, demonstrate conceptual feasibility. However, such polymorphism introduces significant performance overheads.
+
+Consequently, a more pragmatic approach would be to fork the project for complex transforms, preserving the performance-critical optimizations of the integer-based implementation while enabling dedicated enhancements for complex arithmetic.
+
+\newpage
+\bibliographystyle{unsrt}  
+\bibliography{references}
+
+\end{document}
