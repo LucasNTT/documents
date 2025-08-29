@@ -72,11 +72,11 @@ Two compilation scripts are included in the repository: one for Windows (\texttt
 The minimum software requirements are CUDA Toolkit 11.4 and a GPU with Compute Capability 3.5. 
 However, to benefit from recent performance improvements and features (such as better register usage, reduced launch latency, and improved occupancy), it is strongly recommended to compile with CUDA Toolkit 12.8 and execute on a Nvidia GPU with Compute Capability 7.0 or higher.
 
-\newpage
 \section{Execution}
 
 The LucasNTT program can be executed via the command line, with optional parameters that override the default values specified in an optional \texttt{LucasNTT.ini} file. A sample \texttt{.ini} file is included in the repository and documents all configurable options, such as output paths, FFT layout, and iteration control.
 
+\newpage
 By default, running the program with a single parameter launches a full Lucas-Lehmer test:
 \begin{minted}[fontsize=\small]{bash}
 LucasNTT 9689
@@ -101,31 +101,20 @@ If no arguments are provided at command line, all values are taken from \texttt{
 
 \section{Coding Lucas-Lehmer Test}
 
-For the sake of illustration, let us detail how we can test with certainty the primality of $M_q = 2^q - 1$ where $q = 82,\!589,\!933$, in $\mathbb{Z}/p\mathbb{Z}$ with $p = 2^{64} - 2^{32} + 1$. Although \texttt{LucasNTT} is able to run the pseudo-primality PRP test by setting \texttt{PRP=1} in the \texttt{.ini} file, we describe here the implementation of the regular Lucas-Lehmer test. Starting with $x_0 = 4$, we compute repeatedly
-$x_{k+1} = x_k^2 - 2 \mod M_q$.
-We leverage Fast Fourier Transforms (FFT) to efficiently square $x$.
+For the sake of illustration, let us detail how we can test with certainty the primality of $M_q = 2^q - 1$ where $q = 82,\!589,\!933$, in $\mathbb{Z}/p\mathbb{Z}$ with $p = 2^{64} - 2^{32} + 1$. Although \texttt{LucasNTT} is able to run the pseudo-primality PRP test by setting \texttt{PRP=1} in the \texttt{.ini} file, we describe here the implementation of the regular Lucas-Lehmer test. Starting with $x_0 = 4$, we compute repeatedly $x_{k+1} = x_k^2 - 2 \mod M_q$. We leverage Fast Fourier Transforms (FFT) to efficiently square $x$.
 
 Let $n$ be the total length of the FFTs used during this process. We split the binary representation of $x$ into $n$ chunks. Since $x$ has $q$ significant bits, each chunk can have up to $\lceil q / n \rceil$ bits, meaning each chunk can hold values up to
 $m = 2^{\lceil q / n \rceil} - 1$.
 The first step is to compute the smallest power-of-two $n$ such that the inequality
-$2nm^2 < p$
-holds. This condition ensures that no overflow occurs during the calculation of $x^2$.
+$2nm^2 < p$ (\cite{LucasNTT_multiplication} holds. This condition ensures that there is no overflow during the calculation of $x^2$.
 
-After reading the command-line parameters and the \texttt{.ini} file, the \texttt{MainProcess} class launches the calculation of $n$ with the help of the \texttt{NttLengths} class. For $q = 82,\!589,\!933$, we compute $n = 2^{22} = 4,\!194,\!304$ (4M). Each element of the FFT thus holds at most
-$\lceil q / n \rceil = 20$
-significant bits. We then allocate a memory buffer $x$ as an array of $n$ 64-bit words in global GPU memory. Although all FFTs are computed in-place, a double-sized buffer must be allocated to perform matrix transpositions. In this example, the memory buffer is
+After reading the command-line parameters and the \texttt{.ini} file, the \texttt{MainProcess} class launches the calculation of $n$ with the help of the \texttt{NttLengths} class. For $q = 82,\!589,\!933$, we compute $n = 2^{22} = 4,\!194,\!304$ (4M). Each element of the FFT thus holds at most $\lceil q / n \rceil = 20$ significant bits. We then allocate a memory buffer $x$ as an array of $n$ 64-bit words in global GPU memory. Although all FFTs are computed in-place, a double-sized buffer must be allocated to perform matrix transpositions. In this example, the memory buffer is
 $4M \times 8 \times 2 = 64\ \text{MB}$.
 Each word initially contains only 19 or 20 significant bits at the beginning of a Lucas-Lehmer iteration, but all 64 bits may be used during the FFT computation. At the end of each iteration, a carry-propagation step ensures that each chunk returns to 19--20 significant bits, ready for the next iteration. This is the role of the \texttt{reduce2base} kernel.
 
-To reduce $x$ modulo $M_q$ at each iteration, \texttt{LucasNTT} uses the IBDWT algorithm (\cite{CF94}). The chunk sizes (19 or 20 bits) are chosen to approximate the irrational theoretical base
-$2^{q/n}$
-as closely as possible. These widths are precomputed and stored in GPU global memory before starting the Lucas-Lehmer process, along with the IBDWT weights that are applied to each element prior to the FFT. To complete the precalculation step, kernels derived from \texttt{Ntt} precompute the $n^\text{th}$ roots of unity, and kernels derived from \texttt{NttFactor} precompute the twiddle factors. These twiddle factors are stored in bit-reversed order to allow efficient coalesced memory access during later computation.
+To reduce $x$ modulo $M_q$ at each iteration, \texttt{LucasNTT} uses the IBDWT algorithm (\cite{CF94}). The chunk sizes (19 or 20 bits) are chosen to approximate the irrational theoretical base $2^{q/n}$ as closely as possible. These widths are precomputed and stored in GPU global memory before starting the Lucas-Lehmer process, along with the IBDWT weights that are applied to each element prior to the FFT. To complete the precalculation step, kernels derived from \texttt{Ntt} precompute the $n^\text{th}$ roots of unity, and kernels derived from \texttt{NttFactor} precompute the twiddle factors. These twiddle factors are stored in bit-reversed order to allow efficient coalesced memory access during later computation.
 
-During the process, all arithmetic operations are performed modulo $p$. Modular addition and subtraction are straightforward, requiring at most one correction step. Multiplication is more involved, as using the \texttt{\%} operator or repeated subtraction would be too costly. Instead, \texttt{LucasNTT} exploits the special structure of $p$. Notably,
-$2^{96} \equiv -1 \mod p$
-and
-$2^{64} \equiv 2^{32} - 1 \mod p$,
-which allows the high and middle bits of a 128-bit product to be efficiently folded back into the 64-bit range (ref needed). As a result, multiplication modulo $p$ is achieved using only two multiplications, three additions, and three conditional tests.
+During the process, all arithmetic operations are performed modulo $p$. Modular addition and subtraction are straightforward, requiring at most one correction step. Multiplication is more involved, as using the \texttt{\%} operator or even fast reduction algorithms (\cite{Mon85} \cite{Bar87} \cite{Knu81}) would be too costly. Instead, \texttt{LucasNTT} exploits the special structure of $p$. Notably, $2^{96} \equiv -1 \mod p$ and $2^{64} \equiv 2^{32} - 1 \mod p$, which allows the high and middle bits of a 128-bit product to be efficiently folded back into the 64-bit range (\cite{ncw14} \cite{OJS25}). As a result, multiplication modulo $p$ is achieved using only two multiplications, three additions, and three conditional tests.
 
 Once the precalculation phase is complete, \texttt{LucasNTT} evaluates the performance of multiple candidate FFT configurations. In the previous example, FFTs of length $n = 2^{22}$ can be executed directly in global memory with 22 sequential steps (although this is known to be suboptimal), or using two stages in shared memory (denoted \texttt{2048:2048} or \texttt{2K:2K}), or with three stages (e.g., \texttt{256:128:128}). As many parameters can vary (radix size, thread usage, transposition strategy, etc.), all candidates are benchmarked as described in the next section.
 
@@ -161,6 +150,7 @@ Each \texttt{KernelPool} is responsible for identifying the appropriate CUDA ker
 \end{itemize}
 A \texttt{Factory} class is responsible for instantiating the appropriate \texttt{Kernel} candidates. The \texttt{Kernel} class, which wraps the actual CUDA kernel launch, lies at the bottom of the hierarchy. 
 
+\newpage
 Most kernels inherit from the \texttt{Ntt} class and use precomputed roots of unity. For each kernel family, several implementation variants typically exist. For example, within the \texttt{FFTROW\_SQUARE\_IFFTROW} family—which performs in shared memory $n$ FFTs by rows, then a pointwise squaring, followed by $n$ backward FFTs—there are several options: one kernel might assign one Radix-2 butterfly per thread, another may assign multiple butterflies per thread, or use a Radix-4 implementation. Even at this level of the hierarchy, we have candidates. And again, the fastest candidate is selected among them. Note that most of the kernels are using C++ templates extensively to minimize runtime overhead. All kernel class names and filenames follow a naming convention that describes first their role, followed by a double underscore, followed by the methodology and the scope of work.
 
 The \texttt{Factory} class is responsible for instantiating all possible kernel variants. The factory design pattern is particularly useful in this context, as this is the only class that needs to be aware of all kernel implementations. From a development standpoint, this is the only place where a new \texttt{\#include} must be added when introducing a new kernel.
@@ -220,11 +210,11 @@ child{
 
 \section{FFT programming}
 
-All \texttt{Ntt} kernels implement the Pease FFT algorithm (\cite{Pea68}). Like the well-known Cooley-Tukey (\cite{CT65}) and Stockham (\cite{Sto66}) algorithms, it is a Radix-based algorithm, but it is often simpler and faster to implement. This is due to its regular structure: the computation of butterflies does not vary across stages. In the Radix-2 version of the algorithm, the outer loop runs for $\log_2(n)$ iterations (as with Cooley-Tukey), while the inner loop processes each of the $n/2$ butterflies using a fixed stride of $n/2$ when loading values. Regardless of the iteration, the results are consistently written back to the output with no stride.
+All \texttt{Ntt} kernels implement the Pease FFT algorithm (\cite{Pea68}). Like the well-known Cooley-Tukey (\cite{CT65}) and Stockham (\cite{Sto66} \cite{CCFHKLMNRW67}) algorithms, it is a Radix-based algorithm, but it is often simpler and faster to implement. This is due to its regular structure: the computation of butterflies does not vary across stages. In the Radix-2 version of the algorithm, the outer loop runs for $\log_2(n)$ iterations (as with Cooley-Tukey), while the inner loop processes each of the $n/2$ butterflies using a fixed stride of $n/2$ when loading values. Regardless of the iteration, the results are consistently written back to the output with no stride.
 
 Here is how the  $\texttt{LucasNTT}$ kernels operate: load data from global memory into shared memory, perform the FFT computation entirely in shared memory, and then write the result back to global memory. In a straightforward Radix-2 Pease implementation, the shared-memory computation uses $n/2$ threads per block, which limits the FFT size to $2^{11}$ when using 1024 threads, the upper limit of Cuda\footnote{\url{https://developer.nvidia.com/blog/cuda-refresher-cuda-programming-model}}. The algorithm consists of an outer loop from 0 to $\log_2(n) - 1$ and an inner butterfly computation where each thread operates as follows: load two values from shared memory with a stride of $n/2$, synchronize threads to ensure all reads are complete, compute the butterfly, write the results back to shared memory with no stride, and then synchronize again to ensure all threads have written their outputs before proceeding to the next stage. 
 
-Here is the pseudo-code of a Decimation-In-Frequency transform:
+Here is the pseudo-code of a Decimation-In-Frequency transform in a Cuda kernel:
 
 \begin{minted}
 [
@@ -256,7 +246,10 @@ Large FFTs are commonly split into 2 or 3 smaller FFTs (\cite{Bai89}). Those sma
 Furthermore, on recent GPUs, we could use Multi-Stage Asynchronous Data Copies using \texttt{cuda::pipeline}, enabling the kernel to overlap memory transfers with computation. In other words, we could start computing the first small FFT once the first transfer has completed, and in parallel start loading in shared memory the elements of the second FFT, and so on. With this technique, the cost of memory transfers could be dramatically reduced, overlapped with FFT computation. Read the related NVIDIA blog\footnote{\url{https://developer.nvidia.com/blog/controlling-data-movement-to-boost-performance-on-ampere-architecture/}} for additional information.
 
 \subsection{Higher Radix}
-The LucasNTT program currently does not fully exploits the potential of the Radix-4 and Radix-8 algorithms. The current implementation is limited to two classes, \texttt{fftr\_\_r4\_8to2k} and \texttt{fftr\_\_r8\_8to2k}, that can probably be improved. Firstly, the roots of unity are currently not stored in shared memory. Secondly, it is not clear whether we should use \texttt{shifts()} or \texttt{mul\_Mod()}. Thirdly, only one butterfly is assigned per thread, meaning that we need $n/4$ threads to compute a Radix-4 FFT of length $n$. This is not optimal for a FFT-4096, used in the \texttt{FFT\_2SMEM} schemes for Mersenne numbers with exponents between $83'886'080$ and $167'772'159$.
+The LucasNTT program currently does not fully exploits the potential of the Radix-4 and Radix-8 algorithms. The current implementation is limited to two classes, \texttt{fftr\_\_r4\_8to2k} and \texttt{fftr\_\_r8\_8to2k}, that can probably be improved. Indeed, the roots of unity are currently not stored in shared memory, so we make repeated accesses to the global memory. Secondly, only one butterfly is currently assigned per thread, meaning that we need $n/4$ threads to compute a Radix-4 FFT of length $n$. This is not optimal for a FFT-4096, used in the \texttt{FFT\_2SMEM} schemes for Mersenne numbers with exponents between $83'886'080$ and $167'772'159$. 
+
+\subsection{Using shifts}
+The multiplication modulo $p$ by the 64-th roots of unity can be performed by shifts instead of the \texttt{mul\_Mod()} method. The code from Nick Craig-Wood (\cite{ncw14} has been adapted to C++/Cuda in \texttt{arithmetics.cu}, although \texttt{LucasNTT} does not currently make systematic use of this approach, apart from a limited implementation in the Radix-4 and Radix-8 kernels. Further investigation of this technique may prove beneficial.
 
 \newpage
 \section{Conclusion}
