@@ -1,0 +1,155 @@
+Exponent = 82589933
+Conclusion = Prime
+PRP = 0
+Iterations = 82589931
+fft = 2048:2048
+n = 4194304
+log2_n = 22
+log3_n = 0
+log5_n = 0
+Candidate Performance (in ms for 1000 loops): FFT_2SMEM = 502.89
+Candidate Performance (in ms for 1000 loops): FFT_2SMEM_STORE_TRANSPOSED = 369.457
+Candidate Performance (in ms for 1000 loops): FFT_2SMEM_TRANSPOSE = 372.78
+Candidate Performance (in ms for 1000 loops): FFT_GMEM = 968.196
+Candidate Performance (in ms for 1000 loops): LucasPRP 2048:2048 = 369.437
+Candidate Performance (in ms for 1000 loops): LucasPRP 4194304 = 969.726
+Candidate Performance (in ms for 1000 loops): fftr__cg_r2_8to4k = 38.8352
+Candidate Performance (in ms for 1000 loops): fftr__cg_r2_8to4k (bflies=1) = 56.5658
+Candidate Performance (in ms for 1000 loops): fftr__cg_r2_8to4k (bflies=2) = 40.9395
+Candidate Performance (in ms for 1000 loops): fftr__cg_r2_8to4k (bflies=4) = 38.8352
+Candidate Performance (in ms for 1000 loops): fftr__cg_r2_8to4k (bflies=8) = 40.0098
+Candidate Performance (in ms for 1000 loops): fftr__r2_8to4k = 36.8657
+Candidate Performance (in ms for 1000 loops): fftr__r2_8to4k (bflies=1) = 59.9552
+Candidate Performance (in ms for 1000 loops): fftr__r2_8to4k (bflies=2) = 38.9147
+Candidate Performance (in ms for 1000 loops): fftr__r2_8to4k (bflies=4) = 36.8657
+Candidate Performance (in ms for 1000 loops): fftr__r2_8to4k (bflies=8) = 39.308
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__cg_r2_8to4k = 71.6667
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__cg_r2_8to4k (bflies=1) = 88.0425
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__cg_r2_8to4k (bflies=2) = 71.7241
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__cg_r2_8to4k (bflies=4) = 71.6667
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__cg_r2_8to4k (bflies=8) = 74.1356
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__r2_8to4k = 69.0361
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__r2_8to4k (bflies=1) = 86.8239
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__r2_8to4k (bflies=2) = 69.0361
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__r2_8to4k (bflies=4) = 71.4636
+Candidate Performance (in ms for 1000 loops): fftr_sqr_ifftr__r2_8to4k (bflies=8) = 73.7819
+Candidate Performance (in ms for 1000 loops): gmem_cooley_tukey__r2_8to64m = 857.377
+Candidate Performance (in ms for 1000 loops): gmem_pease__r2_8to64m = 1201.7
+Candidate Performance (in ms for 1000 loops): ifftr__cg_r2_8to4k = 40.9385
+Candidate Performance (in ms for 1000 loops): ifftr__cg_r2_8to4k (bflies=1) = 55.3851
+Candidate Performance (in ms for 1000 loops): ifftr__cg_r2_8to4k (bflies=2) = 44.5645
+Candidate Performance (in ms for 1000 loops): ifftr__cg_r2_8to4k (bflies=4) = 40.9436
+Candidate Performance (in ms for 1000 loops): ifftr__cg_r2_8to4k (bflies=8) = 40.9385
+Candidate Performance (in ms for 1000 loops): ifftr__r2_8to4k = 38.9997
+Candidate Performance (in ms for 1000 loops): ifftr__r2_8to4k (bflies=1) = 62.3216
+Candidate Performance (in ms for 1000 loops): ifftr__r2_8to4k (bflies=2) = 41.6231
+Candidate Performance (in ms for 1000 loops): ifftr__r2_8to4k (bflies=4) = 38.9997
+Candidate Performance (in ms for 1000 loops): ifftr__r2_8to4k (bflies=8) = 40.6975
+Candidate Performance (in ms for 1000 loops): ifftr_uw__r2_8to4k = 45.0945
+Candidate Performance (in ms for 1000 loops): ifftr_uw__r2_8to4k (bflies=1) = 60.2115
+Candidate Performance (in ms for 1000 loops): ifftr_uw__r2_8to4k (bflies=2) = 45.0945
+Candidate Performance (in ms for 1000 loops): ifftr_uw__r2_8to4k (bflies=4) = 45.1355
+Candidate Performance (in ms for 1000 loops): ifftr_uw__r2_8to4k (bflies=8) = 49.6165
+Candidate Performance (in ms for 1000 loops): m2 = 2.05517
+Candidate Performance (in ms for 1000 loops): m2__tr = 2.18982
+Candidate Performance (in ms for 1000 loops): r2b = 26.6936
+Candidate Performance (in ms for 1000 loops): r2b__tr = 26.7258
+Candidate Performance (in ms for 1000 loops): transpose_tw = 16.3492
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=04, elementsPerThread=01) = 126.874
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=04, elementsPerThread=02) = 126.884
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=04, elementsPerThread=04) = 126.916
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=08, elementsPerThread=01) = 32.7598
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=08, elementsPerThread=02) = 32.7926
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=08, elementsPerThread=04) = 32.8294
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=08, elementsPerThread=08) = 34.8006
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=16, elementsPerThread=01) = 16.4024
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=16, elementsPerThread=02) = 16.3492
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=16, elementsPerThread=04) = 16.3881
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=16, elementsPerThread=08) = 16.4659
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=16, elementsPerThread=16) = 18.8764
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=32, elementsPerThread=01) = 24.3302
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=32, elementsPerThread=02) = 16.7045
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=32, elementsPerThread=04) = 16.3973
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=32, elementsPerThread=08) = 16.5631
+Candidate Performance (in ms for 1000 loops): transpose_tw (tileSize=32, elementsPerThread=16) = 18.4299
+Candidate Performance (in ms for 1000 loops): transpose_uw = 16.4055
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=04, elementsPerThread=01) = 126.813
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=04, elementsPerThread=02) = 126.649
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=04, elementsPerThread=04) = 126.918
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=08, elementsPerThread=01) = 32.7578
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=08, elementsPerThread=02) = 32.7925
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=08, elementsPerThread=04) = 32.809
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=08, elementsPerThread=08) = 34.7986
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=16, elementsPerThread=01) = 18.4207
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=16, elementsPerThread=02) = 16.4055
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=16, elementsPerThread=04) = 17.5647
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=16, elementsPerThread=08) = 18.4381
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=16, elementsPerThread=16) = 19.3577
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=32, elementsPerThread=01) = 27.8282
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=32, elementsPerThread=02) = 16.9451
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=32, elementsPerThread=04) = 16.4198
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=32, elementsPerThread=08) = 17.5473
+Candidate Performance (in ms for 1000 loops): transpose_uw (tileSize=32, elementsPerThread=16) = 19.8625
+Candidate Performance (in ms for 1000 loops): tw_ifftc_uw__r2_8to4k = 160.805
+Candidate Performance (in ms for 1000 loops): tw_ifftc_uw__r2_8to4k (bflies=1) = 166.487
+Candidate Performance (in ms for 1000 loops): tw_ifftc_uw__r2_8to4k (bflies=2) = 161.734
+Candidate Performance (in ms for 1000 loops): tw_ifftc_uw__r2_8to4k (bflies=4) = 160.805
+Candidate Performance (in ms for 1000 loops): tw_ifftc_uw__r2_8to4k (bflies=8) = 161.984
+Candidate Performance (in ms for 1000 loops): tw_transpose = 18.5108
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=04, elementsPerThread=01) = 126.917
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=04, elementsPerThread=02) = 126.916
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=04, elementsPerThread=04) = 126.916
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=08, elementsPerThread=01) = 32.7864
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=08, elementsPerThread=02) = 34.307
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=08, elementsPerThread=04) = 34.6143
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=08, elementsPerThread=08) = 36.8783
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=16, elementsPerThread=01) = 22.6396
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=16, elementsPerThread=02) = 20.2988
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=16, elementsPerThread=04) = 18.6992
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=16, elementsPerThread=08) = 20.1871
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=16, elementsPerThread=16) = 22.6458
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=32, elementsPerThread=01) = 34.393
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=32, elementsPerThread=02) = 20.483
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=32, elementsPerThread=04) = 18.5108
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=32, elementsPerThread=08) = 20.4606
+Candidate Performance (in ms for 1000 loops): tw_transpose (tileSize=32, elementsPerThread=16) = 25.2047
+Candidate Performance (in ms for 1000 loops): w_fftc_tw__r2_8to4k = 157.591
+Candidate Performance (in ms for 1000 loops): w_fftc_tw__r2_8to4k (bflies=1) = 164.748
+Candidate Performance (in ms for 1000 loops): w_fftc_tw__r2_8to4k (bflies=2) = 157.594
+Candidate Performance (in ms for 1000 loops): w_fftc_tw__r2_8to4k (bflies=4) = 157.591
+Candidate Performance (in ms for 1000 loops): w_fftc_tw__r2_8to4k (bflies=8) = 161.816
+Candidate Performance (in ms for 1000 loops): w_fftr__r2_8to4k = 48.4574
+Candidate Performance (in ms for 1000 loops): w_fftr__r2_8to4k (bflies=1) = 61.8885
+Candidate Performance (in ms for 1000 loops): w_fftr__r2_8to4k (bflies=2) = 48.4574
+Candidate Performance (in ms for 1000 loops): w_fftr__r2_8to4k (bflies=4) = 49.1271
+Candidate Performance (in ms for 1000 loops): w_fftr__r2_8to4k (bflies=8) = 51.7956
+Candidate Performance (in ms for 1000 loops): w_transpose = 16.3928
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=04, elementsPerThread=01) = 127.287
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=04, elementsPerThread=02) = 126.919
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=04, elementsPerThread=04) = 126.922
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=08, elementsPerThread=01) = 32.7905
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=08, elementsPerThread=02) = 32.872
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=08, elementsPerThread=04) = 34.5297
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=08, elementsPerThread=08) = 34.8074
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=16, elementsPerThread=01) = 18.432
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=16, elementsPerThread=02) = 16.3959
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=16, elementsPerThread=04) = 16.3928
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=16, elementsPerThread=08) = 18.4818
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=16, elementsPerThread=16) = 20.5175
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=32, elementsPerThread=01) = 28.094
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=32, elementsPerThread=02) = 17.4567
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=32, elementsPerThread=04) = 16.4
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=32, elementsPerThread=08) = 18.4613
+Candidate Performance (in ms for 1000 loops): w_transpose (tileSize=32, elementsPerThread=16) = 22.5358
+Pool = FFT_2SMEM_STORE_TRANSPOSED
+Kernel0 = w_fftr__r2_8to4k
+Kernel1 = transpose_tw
+Kernel2 = fftr_sqr_ifftr__r2_8to4k
+Kernel3 = tw_transpose
+Kernel4 = ifftr_uw__r2_8to4k
+Kernel5 = r2b__tr
+Kernel6 = m2__tr
+Interrupted = 0
+currentIteration = 82589932
+Per iteration (ms) = 0.383459
+Total time (sec) = 31669.9
