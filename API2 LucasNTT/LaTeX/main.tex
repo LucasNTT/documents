@@ -74,7 +74,7 @@ Then $M_q$ is prime if and only if
 
 The sequence begins as follows: 4, 14, 194, 37634. After a few iterations, the values quickly exceed $M_q$, so modular reduction is applied at each step to keep the numbers manageable. The test itself is conceptually simple, but it requires repeatedly squaring and reducing very large integers modulo $M_q$. To perform these computations in a reasonable time, fast multiplication algorithms must be employed.
 
-Currently, all major implementations rely on FFT-based multiplication in the complex field. However, floating-point operations inevitably introduce round-off errors, even in double precision. Significant efforts have been made to minimize these inaccuracies. As a result, there is no doubt about the primality of the largest known primes.
+Currently\footnote{[EDIT Aug 2025] GIMPS has started implementing NTT for prime hunting.}, all major implementations rely on FFT-based multiplication in the complex field. However, floating-point operations inevitably introduce round-off errors, even in double precision. Significant efforts have been made to minimize these inaccuracies. As a result, there is no doubt about the primality of the largest known primes.
 
 Nevertheless, no formal proof relying solely on pure-integer calculations has ever been performed. The LucasNTT Cuda program aims to provide a solid, efficient, and reliable method for running the Lucas-Lehmer primality test on giant Mersenne numbers, using exclusively pure-integer arithmetic.
 
@@ -95,6 +95,8 @@ Today, the finite field $\mathbb{Z}/(2^{64} - 2^{32} + 1)\mathbb{Z}$, often refe
  
 Surprisingly, this modulus was already mentioned in 1976 by Liu et al (\cite{LRT76}). In the context of NTT and the Lucas-Lehmer test, an efficient implementation was provided by Nick Craig-Wood (\cite{ncw94} \cite{ncw14}), whose code served as a valuable source of inspiration for the present work. I would like to acknowledge his contribution, which greatly facilitated my own research.
 
+[EDIT Aug 2025] More recently, Yves Gallot (\cite{marin_github}) built a super fast NTT implementation with this modulus, giving to the PrMers project (\cite{prmers_github}) an efficient backend to perform the Lucas-Lehmer test. 
+
 \section{Reducing modulo q with an IBDWT}
 
 During the Lucas-Lehmer test, it is necessary to reduce the result modulo $M_q$, the Mersenne number. One method is to use a double-length DFT, split the result exactly after $q$ bits and add the two halves together (\cite{Sol99}. Another method, which does not need a double-length DFT, takes advantage of the fact that Discrete Fourier Transforms naturally perform a cyclic convolution, which is equivalent to a reduction modulo $\beta^n - 1$, where $\beta$ is the base used to represent input numbers.
@@ -103,7 +105,7 @@ It turns out that by adjusting the base of the input numbers, the cyclic convolu
 
 To achieve the desired reduction with this variable base, it is necessary to multiply each element by a weighting factor, so that the convolution in the variable base behaves like an unweighted convolution in the irrational base. As a result, the convolution directly performs a reduction modulo $M_q$, without the need to double and zero-pad the DFT input.
 
-Historically, the IBDWT has been applied in the complex field. But it can also be performed in $\mathbb{Z}/p\mathbb{Z}$ by weighting the input signal with $n\textsuperscript{th}$ roots of \emph{two} modulo $p$ (\cite{mon96} \cite{LucasNTT_multiplication}).
+Historically, the IBDWT has been applied in the complex field. But it can also be performed in $\mathbb{Z}/p\mathbb{Z}$ by weighting the input signal with $n\textsuperscript{th}$ roots of \emph{two} modulo $p$ (\cite{mon96}).
 
 However, using an IBDWT introduces two consequences. Firstly, a primitive $n$-th root of two must exist in $\mathbb{Z}/p\mathbb{Z}$. This requirement can limit the possible length $n$ of the transform. Secondly, because of the weighting factors, overflows may occur more easily during the convolution, which means that the transform length must sometimes be reduced.
 

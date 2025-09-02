@@ -63,9 +63,9 @@ Beyond its use in primality testing, this document aims to present how to implem
 The following sections describe how to compile and execute the program, how the code is structured, and how the mathematical operations are mapped onto the GPU. Particular attention is given to readability, maintainability, and performance, with a detailed explanation of the role of each class and the design choices made throughout the implementation.
 
 \section{Compiling LucasNTT}
-The LucasNTT program is written in standard C++11 and CUDA, with no external library dependencies. It can be built either from the command line using provided batch scripts, or from within Visual Studio on Windows for debugging purposes.
+The LucasNTT program is written in standard C++11 and CUDA, with no external library dependencies. It can be built either from the command line using provided batch scripts, the provided \texttt{Makefile} or from within Visual Studio on Windows for debugging purposes.
 
-Two compilation scripts are included in the repository: one for Windows (\texttt{\_build\_windows.cmd}) and one for Linux (\texttt{\_build\_linux.sh}). These scripts scan the source directory and build all files in the directory.
+Two compilation scripts are included in the repository: one for Windows (\texttt{\_build\_windows.cmd}) and one for Linux (\texttt{\_build\_linux.sh}). These scripts scan the source directory and build all files in the directory. On Linux, the \texttt{make} command can simply be used instead. 
 
 \textbf{Please modify these scripts according to your needs, by specifying the compute capability of the targeted GPU at the top of the file.}
 
@@ -106,7 +106,7 @@ For the sake of illustration, let us detail how we can test with certainty the p
 Let $n$ be the total length of the FFTs used during this process. We split the binary representation of $x$ into $n$ chunks. Since $x$ has $q$ significant bits, each chunk can have up to $\lceil q / n \rceil$ bits, meaning each chunk can hold values up to
 $m = 2^{\lceil q / n \rceil} - 1$.
 The first step is to compute the smallest power-of-two $n$ such that the inequality
-$2nm^2 < p$ (\cite{LucasNTT_multiplication}) holds. This condition ensures that there is no overflow during the calculation of $x^2$.
+$2nm^2 < p$ holds. This condition ensures that there is no overflow during the calculation of $x^2$.
 
 After reading the command-line parameters and the \texttt{.ini} file, the \texttt{MainProcess} class launches the calculation of $n$ with the help of the \texttt{NttLengths} class. For $q = 82,\!589,\!933$, we compute $n = 2^{22} = 4,\!194,\!304$ (4M). Each element of the FFT thus holds at most $\lceil q / n \rceil = 20$ significant bits. We then allocate a memory buffer $x$ as an array of $n$ 64-bit words in global GPU memory. Although all FFTs are computed in-place, a double-sized buffer must be allocated to perform matrix transpositions. In this example, the memory buffer is
 $4M \times 8 \times 2 = 64\ \text{MB}$.
